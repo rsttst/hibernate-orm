@@ -101,7 +101,8 @@ public final class AnnotationsMetadataReader {
 		if (auditMerge != null) {
 			auditData.setMergeable(auditMerge.mergeable());
 			auditData.setMergeTimeoutSeconds(auditMerge.timeoutSeconds());
-		} else {
+		}
+		else {
 			auditData.setMergeable(globalCfg.isDefaultAuditMergeEnabled());
 			auditData.setMergeTimeoutSeconds(globalCfg.getDefaultAuditMergeTimeoutSeconds());
 		}

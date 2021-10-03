@@ -34,7 +34,6 @@ public interface AuditWorkUnit extends WorkUnitMergeVisitor, WorkUnitMergeDispat
 	 *
 	 * @param session Session, in which the work unit should be performed.
 	 * @param revisionData The current revision data, which will be used to populate the work unit with the correct
-	 * @param
 	 * revision relation.
 	 */
 	void perform(Session session, Object revisionData);

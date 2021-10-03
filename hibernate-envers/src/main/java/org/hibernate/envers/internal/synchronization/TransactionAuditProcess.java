@@ -33,23 +33,19 @@ import java.util.stream.Collectors;
  * @author Chris Cranford
  */
 public class TransactionAuditProcess implements AuditProcess {
-	private static final Logger log = Logger.getLogger( TransactionAuditProcess.class );
-
+	private static final Logger log = Logger.getLogger(TransactionAuditProcess.class);
+	private static final String AUDIT_QUERY_ALIAS = "e";
 	private final RevisionInfoGenerator revisionInfoGenerator;
 	private final AuditVetoer auditVetoer;
 	private final boolean alwaysPersistRevisions;
 	private final SessionImplementor sessionImplementor;
-
 	private final Map<Pair<String, Object>, AuditWorkUnit> workUnitsByNameAndId;
 	private final List<AuditWorkUnit> workUnitsWithoutId;
-
 	private final Map<Pair<String, Object>, Object[]> entityStateCache;
 	private final EntityChangeNotifier entityChangeNotifier;
-
 	private Object currentRevisionData;
 
-	public TransactionAuditProcess(RevisionInfoGenerator revisionInfoGenerator, AuditVetoer auditVetoer,
-								   boolean alwaysPersistRevisions, SessionImplementor sessionImplementor) {
+	public TransactionAuditProcess(RevisionInfoGenerator revisionInfoGenerator, AuditVetoer auditVetoer, boolean alwaysPersistRevisions, SessionImplementor sessionImplementor) {
 		this.revisionInfoGenerator = revisionInfoGenerator;
 		this.auditVetoer = auditVetoer;
 		this.alwaysPersistRevisions = alwaysPersistRevisions;
@@ -59,43 +55,44 @@ public class TransactionAuditProcess implements AuditProcess {
 		workUnitsWithoutId = new ArrayList<>();
 
 		entityStateCache = new HashMap<>();
-		entityChangeNotifier = new EntityChangeNotifier( revisionInfoGenerator, sessionImplementor);
+		entityChangeNotifier = new EntityChangeNotifier(revisionInfoGenerator, sessionImplementor);
 
 		currentRevisionData = null;
 	}
 
 	@Override
 	public void cacheEntityState(Object id, String entityName, Object[] snapshot) {
-		final Pair<String, Object> key = new Pair<>( entityName, id );
-		if ( entityStateCache.containsKey( key ) ) {
-			throw new AuditException( "The entity [" + entityName + "] with id [" + id + "] is already cached." );
+		final Pair<String, Object> key = new Pair<>(entityName, id);
+		if (entityStateCache.containsKey(key)) {
+			throw new AuditException("The entity [" + entityName + "] with id [" + id + "] is already cached.");
 		}
-		entityStateCache.put( key, snapshot );
+		entityStateCache.put(key, snapshot);
 	}
 
 	@Override
 	public Object[] getCachedEntityState(Object id, String entityName) {
-		final Pair<String, Object> key = new Pair<>( entityName, id );
-		final Object[] entityState = entityStateCache.get( key );
-		if ( entityState != null ) {
-			entityStateCache.remove( key );
+		final Pair<String, Object> key = new Pair<>(entityName, id);
+		final Object[] entityState = entityStateCache.get(key);
+		if (entityState != null) {
+			entityStateCache.remove(key);
 		}
 		return entityState;
 	}
 
 	@Override
 	public void addWorkUnit(AuditWorkUnit vwu) {
-		if ( !vwu.containsWork() ) {
+		if (!vwu.containsWork()) {
 			return;
 		}
 
 		final Object entityId = vwu.getEntityId();
-		if ( entityId == null ) {
+		if (entityId == null) {
 			workUnitsWithoutId.add(vwu);
-		} else {
+		}
+		else {
 			final String entityName = vwu.getEntityName();
 			workUnitsByNameAndId.compute(
-					Pair.make( entityName, entityId ),
+					Pair.make(entityName, entityId),
 					(key, value) -> value != null ? vwu.dispatch(value) : vwu
 			);
 		}
@@ -120,7 +117,7 @@ public class TransactionAuditProcess implements AuditProcess {
 			if (isWorkUnitWithAddPredecessor(workUnit)
 					&& auditVetoer.couldHaveMissingCreationAudit(session, workUnit.getEntityName(), workUnit.getEntityId())
 					&& hasMissingAddAudit(session, workUnit.getEntityName(), workUnit.getEntityId())) {
-						missingAddWorkUnits.addAll(extractModWorkUnit(workUnit).generateMissingAddWorkUnits());
+				missingAddWorkUnits.addAll(extractModWorkUnit(workUnit).generateMissingAddWorkUnits());
 			}
 		}
 
@@ -162,15 +159,15 @@ public class TransactionAuditProcess implements AuditProcess {
 	private ModWorkUnit extractModWorkUnit(AuditWorkUnit auditWorkUnit) {
 		if (auditWorkUnit instanceof ModWorkUnit) {
 			return (ModWorkUnit) auditWorkUnit;
-		} else if (auditWorkUnit instanceof FakeBidirectionalRelationWorkUnit
+		}
+		else if (auditWorkUnit instanceof FakeBidirectionalRelationWorkUnit
 				&& ((FakeBidirectionalRelationWorkUnit) auditWorkUnit).getNestedWorkUnit() instanceof ModWorkUnit) {
 			return (ModWorkUnit) ((FakeBidirectionalRelationWorkUnit) auditWorkUnit).getNestedWorkUnit();
-		} else {
+		}
+		else {
 			throw new IllegalArgumentException("AuditWorkUnit isn't and also doesn't contain a ModWorkUnit");
 		}
 	}
-
-	private static final String AUDIT_QUERY_ALIAS = "e";
 
 	private boolean hasMissingAddAudit(Session session, String entityName, Serializable entityId) {
 		final EnversService enversService = this.sessionImplementor.getSessionFactory().getServiceRegistry().getService(EnversService.class);
@@ -192,42 +189,42 @@ public class TransactionAuditProcess implements AuditProcess {
 	private Object createRevisionData(Session session, boolean persist) {
 		final Object missingAddRevisionData = revisionInfoGenerator.generate();
 		if (persist) {
-			revisionInfoGenerator.saveRevisionData( session, missingAddRevisionData );
+			revisionInfoGenerator.saveRevisionData(session, missingAddRevisionData);
 		}
 		return missingAddRevisionData;
 	}
 
 	@Override
 	public void doBeforeTransactionCompletion(SessionImplementor session) {
-		if ( workUnitsWithoutId.isEmpty() && workUnitsByNameAndId.isEmpty() ) {
+		if (workUnitsWithoutId.isEmpty() && workUnitsByNameAndId.isEmpty()) {
 			return;
 		}
 
-		if ( !session.getTransactionCoordinator().isActive() ) {
-			log.debug( "Skipping envers transaction hook due to non-active (most likely marked-rollback-only) transaction" );
+		if (!session.getTransactionCoordinator().isActive()) {
+			log.debug("Skipping envers transaction hook due to non-active (most likely marked-rollback-only) transaction");
 			return;
 		}
 
 		// see: http://www.jboss.com/index.html?module=bb&op=viewtopic&p=4178431
-		if ( FlushMode.MANUAL.equals( session.getHibernateFlushMode() ) || session.isClosed() ) {
+		if (FlushMode.MANUAL.equals(session.getHibernateFlushMode()) || session.isClosed()) {
 			Session temporarySession = null;
 			try {
 				temporarySession = session.sessionWithOptions()
 						.connection()
-						.autoClose( false )
-						.connectionHandlingMode( PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION )
+						.autoClose(false)
+						.connectionHandlingMode(PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION)
 						.openSession();
-				executeInSession( temporarySession );
+				executeInSession(temporarySession);
 				temporarySession.flush();
 			}
 			finally {
-				if ( temporarySession != null ) {
+				if (temporarySession != null) {
 					temporarySession.close();
 				}
 			}
 		}
 		else {
-			executeInSession( session );
+			executeInSession(session);
 
 			// Explicitly flushing the session, as the auto-flush may have already happened.
 			session.flush();
