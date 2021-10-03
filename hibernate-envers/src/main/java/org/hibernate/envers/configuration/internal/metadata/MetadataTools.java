@@ -81,33 +81,19 @@ public final class MetadataTools {
 		return propMapping;
 	}
 
-	public static Element addProperty(Element parent, String name, String type, boolean insertable, boolean key) {
-		return addProperty( parent, name, type, insertable, false, key );
-	}
-
-	public static Element addModifiedFlagProperty(Element parent, String propertyName, String suffix, String modifiedFlagName) {
-		return addProperty(
-				parent,
-				(modifiedFlagName != null) ? modifiedFlagName : getModifiedFlagPropertyName( propertyName, suffix ),
-				"boolean",
-				true,
-				false,
-				false
-		);
-	}
-
 	public static Element addModifiedFlagPropertyWithColumn(
 			Element parent,
 			String propertyName,
 			String suffix,
 			String modifiedFlagName,
-			String columnName) {
+			String columnName,
+			boolean enableUpdatableRevisions) {
 		final Element property = addProperty(
 				parent,
 				(modifiedFlagName != null) ? modifiedFlagName : getModifiedFlagPropertyName( propertyName, suffix ),
 				"boolean",
 				true,
-				false,
+				enableUpdatableRevisions,
 				false
 		);
 

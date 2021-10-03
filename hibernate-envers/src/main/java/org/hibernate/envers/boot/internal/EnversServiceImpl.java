@@ -28,6 +28,7 @@ import org.hibernate.envers.internal.revisioninfo.RevisionInfoQueryCreator;
 import org.hibernate.envers.internal.synchronization.AuditProcessManager;
 import org.hibernate.envers.internal.tools.ReflectionTools;
 import org.hibernate.envers.strategy.AuditStrategy;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.internal.util.ReflectHelper;
 import org.hibernate.internal.util.config.ConfigurationHelper;
 import org.hibernate.service.ServiceRegistry;
@@ -68,6 +69,7 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 	private AuditEntitiesConfiguration auditEntitiesConfiguration;
 	private AuditProcessManager auditProcessManager;
 	private AuditStrategy auditStrategy;
+	private AuditVetoer auditVetoer;
 	private EntitiesConfigurations entitiesConfigurations;
 	private RevisionInfoQueryCreator revisionInfoQueryCreator;
 	private RevisionInfoNumberReader revisionInfoNumberReader;
@@ -131,12 +133,13 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 				reflectionManager
 		);
 
-		EnversServiceImpl.this.auditEntitiesConfiguration = new AuditEntitiesConfiguration(
+		this.auditEntitiesConfiguration = new AuditEntitiesConfiguration(
 				properties,
 				revInfoCfgResult.getRevisionInfoEntityName(),
 				this
 		);
-		this.auditProcessManager = new AuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator() );
+		this.auditVetoer = initializeAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
+		this.auditProcessManager = new AuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator(), auditVetoer, globalConfiguration.isAlwaysPersistRevisions() );
 		this.revisionInfoQueryCreator = revInfoCfgResult.getRevisionInfoQueryCreator();
 		this.revisionInfoNumberReader = revInfoCfgResult.getRevisionInfoNumberReader();
 		this.modifiedEntityNamesReader = revInfoCfgResult.getModifiedEntityNamesReader();
@@ -181,6 +184,22 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		strategy.postInitialize( revisionInfoClass, revisionInfoTimestampData, serviceRegistry );
 
 		return strategy;
+	}
+
+	private static AuditVetoer initializeAuditVetoer(String auditVetoerName, ServiceRegistry serviceRegistry) {
+		AuditVetoer auditVetoer;
+
+		try {
+			final Class<?> auditVetoerClass = loadClass( auditVetoerName, serviceRegistry );
+			auditVetoer = (AuditVetoer) ReflectHelper.getDefaultConstructor( auditVetoerClass ).newInstance();
+		} catch (Exception e) {
+			throw new MappingException( String.format( "Unable to create AuditVetoer [%s] instance.", auditVetoerName ), e);
+		}
+
+		// Strategy-specific initialization
+		auditVetoer.postInitialize( serviceRegistry );
+
+		return auditVetoer;
 	}
 
 	/**
@@ -230,6 +249,14 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 			throw new IllegalStateException( "Service is not yet initialized" );
 		}
 		return auditStrategy;
+	}
+
+	@Override
+	public AuditVetoer getAuditVetoer() {
+		if ( !initialized ) {
+			throw new IllegalStateException( "Service is not yet initialized" );
+		}
+		return auditVetoer;
 	}
 
 	@Override

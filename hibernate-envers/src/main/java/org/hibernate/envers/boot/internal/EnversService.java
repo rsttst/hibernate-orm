@@ -17,6 +17,7 @@ import org.hibernate.envers.internal.revisioninfo.RevisionInfoNumberReader;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoQueryCreator;
 import org.hibernate.envers.internal.synchronization.AuditProcessManager;
 import org.hibernate.envers.strategy.AuditStrategy;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.service.Service;
 import org.hibernate.service.ServiceRegistry;
 
@@ -62,6 +63,8 @@ public interface EnversService extends Service {
 	AuditProcessManager getAuditProcessManager();
 
 	AuditStrategy getAuditStrategy();
+
+	AuditVetoer getAuditVetoer();
 
 	EntitiesConfigurations getEntitiesConfigurations();
 

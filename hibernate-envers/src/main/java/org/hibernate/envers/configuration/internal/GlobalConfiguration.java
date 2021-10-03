@@ -73,6 +73,13 @@ public class GlobalConfiguration {
 	// Forces audit reader find by revision methods to perform exact match
 	private final boolean findByRevisionExactMatch;
 
+	// Opt into revision-info and audit entities being made updatable for MergingAuditStrategy.
+	private final boolean enableUpdatableRevisions;
+
+	// Always save revision info entities even when the audit strategy saves no audited entities.
+	// Disabling it currently only has an effect on MergingAuditStrategy.
+	private boolean alwaysPersistRevisions;
+
 	/*
 		 Which operator to use in correlated subqueries (when we want a property to be equal to the result of
 		 a correlated subquery, for example: e.p <operator> (select max(e2.p) where e2.p2 = e.p2 ...).
@@ -186,6 +193,14 @@ public class GlobalConfiguration {
 		findByRevisionExactMatch = ConfigurationHelper.getBoolean(
 				EnversSettings.FIND_BY_REVISION_EXACT_MATCH, properties, false
 		);
+
+		enableUpdatableRevisions = ConfigurationHelper.getBoolean(
+				EnversSettings.ENABLE_UPDATABLE_REVISIONS, properties, false
+		);
+
+		alwaysPersistRevisions = ConfigurationHelper.getBoolean(
+				EnversSettings.ALWAYS_PERSIST_REVISIONS, properties, true
+		);
 	}
 
 	public EnversService getEnversService() {
@@ -254,6 +269,14 @@ public class GlobalConfiguration {
 
 	public boolean isAuditReaderFindAtRevisionExactMatch() {
 		return findByRevisionExactMatch;
+	}
+
+	public boolean isEnableUpdatableRevisions() {
+		return enableUpdatableRevisions;
+	}
+
+	public boolean isAlwaysPersistRevisions() {
+		return alwaysPersistRevisions;
 	}
 
 	public ModifiedColumnNamingStrategy getModifiedColumnNamingStrategy() {

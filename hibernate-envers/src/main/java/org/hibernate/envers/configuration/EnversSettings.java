@@ -93,6 +93,11 @@ public interface EnversSettings {
 	String ORIGINAL_ID_PROP_NAME = "org.hibernate.envers.original_id_prop_name";
 
 	/**
+	 * Audit vetoer. Defaults to {@link org.hibernate.envers.veto.internal.DefaultAuditVetoer}
+	 */
+	String AUDIT_VETOER = "org.hibernate.envers.audit_vetoer";
+
+	/**
 	 * Column name that will hold the end revision number in audit entities. Defaults to {@literal REVEND}.
 	 */
 	String AUDIT_STRATEGY_VALIDITY_END_REV_FIELD_NAME = "org.hibernate.envers.audit_strategy_validity_end_rev_field_name";
@@ -133,6 +138,21 @@ public interface EnversSettings {
 	 * @since 5.4.4
 	 */
 	String FIND_BY_REVISION_EXACT_MATCH = "org.hibernate.envers.find_by_revision_exact_match";
+
+	/**
+	 * Opt into revision-info and audit entities being made updatable for MergingAuditStrategy.
+	 *
+	 * Defaults to {@literal false}.
+	 * */
+	String ENABLE_UPDATABLE_REVISIONS = "org.hibernate.envers.enable_updatable_revisions";
+
+	/**
+	 * Always save revision info entities even when the audit strategy saves no audited entities.
+	 * Disabling it currently only has an effect on MergingAuditStrategy.
+	 *
+	 * Defaults to {@literal true}.
+	 * */
+	String ALWAYS_PERSIST_REVISIONS = "org.hibernate.envers.always_persist_revisions";
 
 	/**
 	 * Specifies the {@link org.hibernate.envers.boot.spi.ModifiedColumnNamingStrategy} to use

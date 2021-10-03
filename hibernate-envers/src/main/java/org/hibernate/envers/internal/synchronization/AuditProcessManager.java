@@ -15,6 +15,7 @@ import org.hibernate.action.spi.BeforeTransactionCompletionProcess;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoGenerator;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.event.spi.EventSource;
 
 /**
@@ -23,11 +24,15 @@ import org.hibernate.event.spi.EventSource;
 public class AuditProcessManager {
 	private final Map<Transaction, AuditProcess> auditProcesses;
 	private final RevisionInfoGenerator revisionInfoGenerator;
+	private final AuditVetoer auditVetoer;
+	private final boolean alwaysPersistRevisions;
 
-	public AuditProcessManager(RevisionInfoGenerator revisionInfoGenerator) {
+	public AuditProcessManager(RevisionInfoGenerator revisionInfoGenerator, AuditVetoer auditVetoer, boolean alwaysPersistRevisions) {
 		auditProcesses = new ConcurrentHashMap<>();
 
 		this.revisionInfoGenerator = revisionInfoGenerator;
+		this.auditVetoer = auditVetoer;
+		this.alwaysPersistRevisions = alwaysPersistRevisions;
 	}
 
 	public AuditProcess get(EventSource session) {
@@ -36,7 +41,7 @@ public class AuditProcessManager {
 		AuditProcess auditProcess = auditProcesses.get( transaction );
 		if ( auditProcess == null ) {
 			// No worries about registering a transaction twice - a transaction is single thread
-			auditProcess = new AuditProcess( revisionInfoGenerator, session );
+			auditProcess = new AuditProcess( revisionInfoGenerator, auditVetoer, alwaysPersistRevisions, session );
 			auditProcesses.put( transaction, auditProcess );
 
 			session.getActionQueue().registerProcess(

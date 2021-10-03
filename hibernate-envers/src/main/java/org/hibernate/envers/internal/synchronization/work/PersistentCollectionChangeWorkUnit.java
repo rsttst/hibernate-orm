@@ -16,6 +16,7 @@ import org.hibernate.Session;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.spi.CollectionEntry;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.configuration.internal.AuditEntitiesConfiguration;
@@ -26,6 +27,7 @@ import org.hibernate.envers.internal.entities.mapper.PersistentCollectionChangeD
  */
 public class PersistentCollectionChangeWorkUnit extends AbstractAuditWorkUnit implements AuditWorkUnit {
 	private final List<PersistentCollectionChangeData> collectionChanges;
+	private final PersistentCollection collection;
 	private final String referencingPropertyName;
 
 	public PersistentCollectionChangeWorkUnit(
@@ -44,7 +46,7 @@ public class PersistentCollectionChangeWorkUnit extends AbstractAuditWorkUnit im
 				new PersistentCollectionChangeWorkUnitId( id, collectionEntry.getRole() ),
 				RevisionType.MOD
 		);
-
+		this.collection = collection;
 		this.referencingPropertyName = referencingPropertyName;
 
 		collectionChanges = enversService.getEntitiesConfigurations().get( getEntityName() ).getPropertyMapper()
@@ -55,13 +57,20 @@ public class PersistentCollectionChangeWorkUnit extends AbstractAuditWorkUnit im
 			SessionImplementor sessionImplementor,
 			String entityName,
 			EnversService enversService,
+			PersistentCollection collection,
 			Serializable id,
 			List<PersistentCollectionChangeData> collectionChanges,
 			String referencingPropertyName) {
 		super( sessionImplementor, entityName, enversService, id, RevisionType.MOD );
 
+		this.collection = collection;
 		this.collectionChanges = collectionChanges;
 		this.referencingPropertyName = referencingPropertyName;
+	}
+
+	@Override
+	public boolean shouldPerform(Session session, AuditVetoer vetoer) {
+		return vetoer.shouldPerformPersistentCollectionChangeAudit(session, entityName, id, referencingPropertyName, collection);
 	}
 
 	@Override
@@ -174,6 +183,7 @@ public class PersistentCollectionChangeWorkUnit extends AbstractAuditWorkUnit im
 					sessionImplementor,
 					entityName,
 					enversService,
+					collection,
 					id,
 					mergedChanges,
 					referencingPropertyName

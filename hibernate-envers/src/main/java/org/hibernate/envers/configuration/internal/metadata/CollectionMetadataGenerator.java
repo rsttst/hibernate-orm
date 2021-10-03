@@ -705,7 +705,7 @@ public final class CollectionMetadataGenerator {
 				final String setOrdinalPropertyName = mainGenerator.getVerEntCfg()
 						.getEmbeddableSetOrdinalPropertyName();
 				final Element ordinalProperty = MetadataTools.addProperty(
-						xmlMapping, setOrdinalPropertyName, "integer", true, true
+						xmlMapping, setOrdinalPropertyName, "integer", true, mainGenerator.getGlobalCfg().isEnableUpdatableRevisions(), true
 				);
 				MetadataTools.addColumn(
 						ordinalProperty, setOrdinalPropertyName, null, null, null, null, null, null, false

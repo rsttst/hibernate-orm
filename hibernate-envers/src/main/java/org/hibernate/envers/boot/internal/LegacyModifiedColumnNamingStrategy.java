@@ -45,7 +45,8 @@ public class LegacyModifiedColumnNamingStrategy implements ModifiedColumnNamingS
 				propertyAuditingData.getName(),
 				globalCfg.getModifiedFlagSuffix(),
 				propertyAuditingData.getModifiedFlagName(),
-				columnName
+				columnName,
+				globalCfg.isEnableUpdatableRevisions()
 		);
 	}
 }

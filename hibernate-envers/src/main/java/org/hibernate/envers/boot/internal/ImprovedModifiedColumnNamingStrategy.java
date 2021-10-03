@@ -60,7 +60,8 @@ public class ImprovedModifiedColumnNamingStrategy extends LegacyModifiedColumnNa
 							propertyAuditingData.getName(),
 							globalCfg.getModifiedFlagSuffix(),
 							propertyAuditingData.getModifiedFlagName(),
-							columnName
+							columnName,
+							globalCfg.isEnableUpdatableRevisions()
 					);
 
 					return;
