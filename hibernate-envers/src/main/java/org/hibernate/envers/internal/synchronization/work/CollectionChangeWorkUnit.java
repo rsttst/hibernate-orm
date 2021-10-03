@@ -10,8 +10,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.hibernate.Session;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.envers.RevisionType;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.internal.entities.EntityConfiguration;
 import org.hibernate.envers.internal.entities.mapper.PropertyMapper;
@@ -36,6 +38,11 @@ public class CollectionChangeWorkUnit extends AbstractAuditWorkUnit implements A
 
 		this.entity = entity;
 		this.collectionPropertyName = collectionPropertyName;
+	}
+
+	@Override
+	public boolean shouldPerform(Session session, AuditVetoer vetoer) {
+		return vetoer.shouldPerformCollectionChangeAudit(session, entityName, id, entityName, collectionPropertyName);
 	}
 
 	@Override

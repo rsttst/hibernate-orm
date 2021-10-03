@@ -30,12 +30,17 @@ public class EntityConfiguration {
 	private Map<String, RelationDescription> relations;
 	private String parentEntityName;
 
+	private boolean mergeable;
+	private long mergeTimeout;
+
 	public EntityConfiguration(
 			String versionsEntityName,
 			String entityClassName,
 			IdMappingData idMappingData,
 			ExtendedPropertyMapper propertyMapper,
-			String parentEntityName) {
+			String parentEntityName,
+			boolean mergeable,
+			long mergeTimeout) {
 		this.versionsEntityName = versionsEntityName;
 		this.entityClassName = entityClassName;
 		this.idMappingData = idMappingData;
@@ -43,6 +48,18 @@ public class EntityConfiguration {
 		this.parentEntityName = parentEntityName;
 
 		this.relations = new HashMap<>();
+
+		this.mergeable = mergeable;
+		this.mergeTimeout = mergeTimeout;
+	}
+
+	public EntityConfiguration(
+			String versionsEntityName,
+			String entityClassName,
+			IdMappingData idMappingData,
+			ExtendedPropertyMapper propertyMapper,
+			String parentEntityName) {
+		this(versionsEntityName, entityClassName, idMappingData, propertyMapper, parentEntityName, false, -1L);
 	}
 
 	public void addToOneRelation(
@@ -150,5 +167,13 @@ public class EntityConfiguration {
 
 	Iterable<RelationDescription> getRelationsIterator() {
 		return relations.values();
+	}
+
+	public boolean isMergeable() {
+		return mergeable;
+	}
+
+	public long getMergeTimeout() {
+		return mergeTimeout;
 	}
 }

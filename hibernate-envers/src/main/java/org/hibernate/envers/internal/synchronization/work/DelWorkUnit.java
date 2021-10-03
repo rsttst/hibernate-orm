@@ -10,7 +10,9 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.hibernate.Session;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.internal.tools.ArraysTools;
@@ -37,6 +39,11 @@ public class DelWorkUnit extends AbstractAuditWorkUnit implements AuditWorkUnit 
 		this.state = state;
 		this.entityPersister = entityPersister;
 		this.propertyNames = entityPersister.getPropertyNames();
+	}
+
+	@Override
+	public boolean shouldPerform(Session session, AuditVetoer vetoer) {
+		return vetoer.shouldPerformDeletionAudit(session, entityName, id, state);
 	}
 
 	@Override

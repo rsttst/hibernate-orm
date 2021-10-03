@@ -8,7 +8,6 @@ package org.hibernate.envers.configuration.internal.metadata;
 
 import java.util.Properties;
 
-import org.hibernate.boot.Metadata;
 import org.hibernate.envers.configuration.internal.metadata.reader.PropertyAuditingData;
 import org.hibernate.envers.internal.entities.PropertyData;
 import org.hibernate.envers.internal.entities.mapper.SimpleMapperBuilder;
@@ -29,10 +28,10 @@ import org.dom4j.Element;
  */
 public final class BasicMetadataGenerator {
 
-	private final Metadata metadata;
+	private final AuditMetadataGenerator mainGenerator;
 
 	public BasicMetadataGenerator(AuditMetadataGenerator mainGenerator) {
-		this.metadata = mainGenerator.getMetadata();
+		this.mainGenerator = mainGenerator;
 	}
 
 	boolean addBasic(
@@ -113,6 +112,7 @@ public final class BasicMetadataGenerator {
 				propertyAuditingData.getName(),
 				isAddNestedType( value ) ? null : getBasicTypeName( value.getType() ),
 				propertyAuditingData.isForceInsertable() || insertable,
+				mainGenerator.getGlobalCfg().isEnableUpdatableRevisions(),
 				key
 		);
 

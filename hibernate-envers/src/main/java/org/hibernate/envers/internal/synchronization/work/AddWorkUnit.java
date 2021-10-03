@@ -10,8 +10,10 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.hibernate.Session;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.envers.RevisionType;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.internal.entities.PropertyData;
 import org.hibernate.envers.internal.entities.mapper.ExtendedPropertyMapper;
@@ -57,6 +59,11 @@ public class AddWorkUnit extends AbstractAuditWorkUnit implements AuditWorkUnit 
 				.entityPersister( getEntityName() )
 				.getPropertyNames();
 		this.state = ArraysTools.mapToArray( data, propertyNames );
+	}
+
+	@Override
+	public boolean shouldPerform(Session session, AuditVetoer vetoer) {
+		return vetoer.shouldPerformCreationAudit(session, entityName, id, state);
 	}
 
 	@Override

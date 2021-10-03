@@ -102,6 +102,12 @@ public final class AnnotationsMetadataReader {
 			auditData.setDefaultAudited( true );
 		}
 
+		final Audited audited = xclass.getAnnotation(Audited.class);
+		if (audited != null) {
+			auditData.setMergeable(audited.mergeable());
+			auditData.setMergeTimeout(audited.mergeTimeout());
+		}
+
 		new AuditedPropertiesReader(
 				defaultStore,
 				new PersistentClassPropertiesSource( xclass ),

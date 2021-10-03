@@ -10,6 +10,7 @@ import java.io.Serializable;
 import java.util.Map;
 
 import org.hibernate.Session;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.RevisionType;
 
 /**
@@ -26,11 +27,14 @@ public interface AuditWorkUnit extends WorkUnitMergeVisitor, WorkUnitMergeDispat
 
 	boolean isPerformed();
 
+	boolean shouldPerform(Session session, AuditVetoer vetoer);
+
 	/**
-	 * Perform this work unit in the given session.
+	 * Perform this work unit in the given session if the
 	 *
 	 * @param session Session, in which the work unit should be performed.
 	 * @param revisionData The current revision data, which will be used to populate the work unit with the correct
+	 * @param
 	 * revision relation.
 	 */
 	void perform(Session session, Object revisionData);

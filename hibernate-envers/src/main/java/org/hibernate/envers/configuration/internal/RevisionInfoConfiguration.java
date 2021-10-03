@@ -101,6 +101,7 @@ public class RevisionInfoConfiguration {
 				revisionInfoTimestampData.getName(),
 				revisionInfoTimestampType.getName(),
 				true,
+				globalCfg.isEnableUpdatableRevisions(),
 				false
 		);
 		MetadataTools.addColumn( timestampProperty, "REVTSTMP", null, null, null, null, null, null, false );

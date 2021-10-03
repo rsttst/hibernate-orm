@@ -22,6 +22,7 @@ import org.hibernate.envers.internal.entities.EntitiesConfigurations;
 import org.hibernate.envers.internal.tools.StringTools;
 import org.hibernate.envers.internal.tools.graph.GraphTopologicalSort;
 import org.hibernate.envers.strategy.AuditStrategy;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.service.ServiceRegistry;
 

@@ -22,6 +22,9 @@ import static org.hibernate.envers.internal.tools.Tools.newHashMap;
 public class ClassAuditingData implements AuditedPropertiesHolder {
 	private final Map<String, PropertyAuditingData> properties;
 	private final Map<String, String> secondaryTableDictionary;
+	private boolean mergeable;
+	private long mergeTimeout;
+
 
 	private AuditTable auditTable;
 
@@ -34,6 +37,8 @@ public class ClassAuditingData implements AuditedPropertiesHolder {
 	public ClassAuditingData() {
 		properties = newHashMap();
 		secondaryTableDictionary = newHashMap();
+		mergeable = false;
+		mergeTimeout = -1;
 	}
 
 	@Override
@@ -73,6 +78,22 @@ public class ClassAuditingData implements AuditedPropertiesHolder {
 
 	public boolean isAudited() {
 		return defaultAudited || properties.size() > 0;
+	}
+
+	public boolean isMergeable() {
+		return mergeable;
+	}
+
+	public void setMergeable(boolean mergeable) {
+		this.mergeable = mergeable;
+	}
+
+	public void setMergeTimeout(long mergeTimeout) {
+		this.mergeTimeout = mergeTimeout;
+	}
+
+	public long getMergeTimeout() {
+		return mergeTimeout;
 	}
 
 	@Override

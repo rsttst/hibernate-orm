@@ -754,6 +754,16 @@ public class AuditedPropertiesReader {
 		public Class<? extends Annotation> annotationType() {
 			return this.getClass();
 		}
+
+		@Override
+		public boolean mergeable() {
+			return false;
+		}
+
+		@Override
+		public long mergeTimeout() {
+			return -1L;
+		}
 	};
 
 	private static final AuditJoinTable DEFAULT_AUDIT_JOIN_TABLE = new AuditJoinTable() {

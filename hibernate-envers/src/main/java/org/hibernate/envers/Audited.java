@@ -64,4 +64,10 @@ public @interface Audited {
 	 * annotation. Ignored if withModifiedFlag is false.
 	 */
 	String modifiedColumnName() default "";
+
+
+	boolean mergeable() default false;
+
+	long mergeTimeout() default -1L;
+
 }

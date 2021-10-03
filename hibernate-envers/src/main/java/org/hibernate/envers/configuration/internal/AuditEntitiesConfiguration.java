@@ -13,6 +13,7 @@ import java.util.Properties;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.configuration.EnversSettings;
 import org.hibernate.envers.strategy.DefaultAuditStrategy;
+import org.hibernate.envers.veto.internal.DefaultAuditVetoer;
 import org.hibernate.internal.util.config.ConfigurationHelper;
 
 /**
@@ -28,6 +29,8 @@ public class  AuditEntitiesConfiguration {
 
 	private final String auditStrategyName;
 	private final String originalIdPropName;
+
+	private final String auditVetoerName;
 
 	private final String revisionFieldName;
 	private final String revisionNumberPath;
@@ -64,6 +67,10 @@ public class  AuditEntitiesConfiguration {
 
 		originalIdPropName = ConfigurationHelper.getString(
 				EnversSettings.ORIGINAL_ID_PROP_NAME, properties, "originalId"
+		);
+
+		auditVetoerName = ConfigurationHelper.getString(
+				EnversSettings.AUDIT_VETOER, properties, DefaultAuditVetoer.class.getName()
 		);
 
 		revisionFieldName = ConfigurationHelper.getString( EnversSettings.REVISION_FIELD_NAME, properties, "REV" );
@@ -160,6 +167,10 @@ public class  AuditEntitiesConfiguration {
 
 	public String getAuditStrategyName() {
 		return auditStrategyName;
+	}
+
+	public String getAuditVetoerName() {
+		return auditVetoerName;
 	}
 
 	public String getRevisionEndFieldName() {

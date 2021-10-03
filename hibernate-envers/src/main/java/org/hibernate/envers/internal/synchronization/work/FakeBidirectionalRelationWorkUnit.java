@@ -12,7 +12,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.hibernate.Session;
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.envers.veto.spi.AuditVetoer;
 import org.hibernate.envers.RevisionType;
 import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.internal.entities.RelationDescription;
@@ -73,6 +75,11 @@ public class FakeBidirectionalRelationWorkUnit extends AbstractAuditWorkUnit imp
 		this.nestedWorkUnit = nestedWorkUnit;
 
 		fakeRelationChanges = new HashMap<>( original.getFakeRelationChanges() );
+	}
+
+	@Override
+	public boolean shouldPerform(Session session, AuditVetoer vetoer) {
+		return nestedWorkUnit.shouldPerform(session, vetoer);
 	}
 
 	public AuditWorkUnit getNestedWorkUnit() {

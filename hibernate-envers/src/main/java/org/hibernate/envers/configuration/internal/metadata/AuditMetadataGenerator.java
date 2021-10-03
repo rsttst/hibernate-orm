@@ -168,6 +168,7 @@ public final class AuditMetadataGenerator {
 				verEntCfg.getRevisionTypePropName(),
 				verEntCfg.getRevisionTypePropType(),
 				true,
+				globalCfg.isEnableUpdatableRevisions(),
 				isKey
 		);
 		revTypeProperty.addAttribute( "type", "org.hibernate.envers.internal.entities.RevisionTypeType" );
@@ -589,7 +590,9 @@ public final class AuditMetadataGenerator {
 					pc.getClassName(),
 					idMapper,
 					propertyMapper,
-					parentEntityName
+					parentEntityName,
+					false,
+					-1L
 			);
 			notAuditedEntitiesConfigurations.put( entityName, entityCfg );
 			return;
@@ -673,7 +676,9 @@ public final class AuditMetadataGenerator {
 				pc.getClassName(),
 				idMapper,
 				propertyMapper,
-				parentEntityName
+				parentEntityName,
+				auditingData.isMergeable(),
+				auditingData.getMergeTimeout()
 		);
 		entitiesConfigurations.put( pc.getEntityName(), entityCfg );
 	}
