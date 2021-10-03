@@ -144,7 +144,8 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		if (globalConfiguration.isRevisionPerTransaction()) {
 			this.auditVetoer = initializeAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
 			this.auditProcessManager = new PerTransactionAuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator(), auditVetoer, globalConfiguration.isAlwaysPersistRevisions() );
-		} else {
+		}
+		else {
 			this.auditProcessManager = new PerSessionAuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator() );
 		}
 
@@ -200,7 +201,8 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		try {
 			final Class<?> auditVetoerClass = loadClass( auditVetoerName, serviceRegistry );
 			auditVetoer = (AuditVetoer) ReflectHelper.getDefaultConstructor( auditVetoerClass ).newInstance();
-		} catch (Exception e) {
+		}
+		catch (Exception e) {
 			throw new MappingException( String.format( "Unable to create AuditVetoer [%s] instance.", auditVetoerName ), e);
 		}
 
