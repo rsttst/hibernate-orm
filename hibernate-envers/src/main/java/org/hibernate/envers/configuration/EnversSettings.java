@@ -140,10 +140,17 @@ public interface EnversSettings {
 	String FIND_BY_REVISION_EXACT_MATCH = "org.hibernate.envers.find_by_revision_exact_match";
 
 	/**
-	 * Opt into revision-info and audit entities being made updatable for MergingAuditStrategy.
+	 * If true every transaction has it's own revision instead of every session
 	 *
 	 * Defaults to {@literal false}.
 	 * */
+	String REVISION_PER_TRANSACTION = "org.hibernate.envers.revision_per_transaction";
+
+	/**
+	 * Opt into revision-info and audit entities being made updatable for MergingAuditStrategy.
+	 *
+	 * Defaults to {@literal false}.
+	 */
 	String ENABLE_UPDATABLE_REVISIONS = "org.hibernate.envers.enable_updatable_revisions";
 
 	/**
@@ -151,8 +158,24 @@ public interface EnversSettings {
 	 * Disabling it currently only has an effect on MergingAuditStrategy.
 	 *
 	 * Defaults to {@literal true}.
-	 * */
+	 */
 	String ALWAYS_PERSIST_REVISIONS = "org.hibernate.envers.always_persist_revisions";
+
+	/**
+	 * Whether audits of entities should be merged by default if @AuditMerge is not specified.
+	 * Only has an effect when used with MergingAuditStrategy.
+	 *
+	 * Defaults to {@literal true}.
+	 */
+	String DEFAULT_AUDIT_MERGE_ENABLED = "org.hibernate.envers.default_audit_merge_enabled";
+
+	/**
+	 * How long the merge timeout is if @AuditMerge is not specified.
+	 * Only has an effect when used with MergingAuditStrategy.
+	 *
+	 * Defaults to {@literal 300} (5 minutes).
+	 */
+	String DEFAULT_AUDIT_MERGE_TIMEOUT_SECONDS = "org.hibernate.envers.default_audit_merge_timeout_seconds";
 
 	/**
 	 * Specifies the {@link org.hibernate.envers.boot.spi.ModifiedColumnNamingStrategy} to use

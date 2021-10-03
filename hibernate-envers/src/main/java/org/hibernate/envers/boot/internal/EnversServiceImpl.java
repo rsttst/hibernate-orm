@@ -26,6 +26,8 @@ import org.hibernate.envers.internal.revisioninfo.ModifiedEntityNamesReader;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoNumberReader;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoQueryCreator;
 import org.hibernate.envers.internal.synchronization.AuditProcessManager;
+import org.hibernate.envers.internal.synchronization.PerSessionAuditProcessManager;
+import org.hibernate.envers.internal.synchronization.PerTransactionAuditProcessManager;
 import org.hibernate.envers.internal.tools.ReflectionTools;
 import org.hibernate.envers.strategy.AuditStrategy;
 import org.hibernate.envers.veto.spi.AuditVetoer;
@@ -138,8 +140,14 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 				revInfoCfgResult.getRevisionInfoEntityName(),
 				this
 		);
-		this.auditVetoer = initializeAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
-		this.auditProcessManager = new AuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator(), auditVetoer, globalConfiguration.isAlwaysPersistRevisions() );
+
+		if (globalConfiguration.isRevisionPerTransaction()) {
+			this.auditVetoer = initializeAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
+			this.auditProcessManager = new PerTransactionAuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator(), auditVetoer, globalConfiguration.isAlwaysPersistRevisions() );
+		} else {
+			this.auditProcessManager = new PerSessionAuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator() );
+		}
+
 		this.revisionInfoQueryCreator = revInfoCfgResult.getRevisionInfoQueryCreator();
 		this.revisionInfoNumberReader = revInfoCfgResult.getRevisionInfoNumberReader();
 		this.modifiedEntityNamesReader = revInfoCfgResult.getModifiedEntityNamesReader();

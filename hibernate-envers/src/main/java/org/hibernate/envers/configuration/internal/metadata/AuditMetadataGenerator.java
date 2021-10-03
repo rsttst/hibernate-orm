@@ -591,7 +591,7 @@ public final class AuditMetadataGenerator {
 					idMapper,
 					propertyMapper,
 					parentEntityName,
-					false,
+					false, // non-audited entities are never mergeable
 					-1L
 			);
 			notAuditedEntitiesConfigurations.put( entityName, entityCfg );
@@ -678,7 +678,7 @@ public final class AuditMetadataGenerator {
 				propertyMapper,
 				parentEntityName,
 				auditingData.isMergeable(),
-				auditingData.getMergeTimeout()
+				auditingData.getMergeTimeoutSeconds()
 		);
 		entitiesConfigurations.put( pc.getEntityName(), entityCfg );
 	}

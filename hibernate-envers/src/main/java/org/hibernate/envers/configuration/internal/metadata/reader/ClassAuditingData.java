@@ -23,7 +23,7 @@ public class ClassAuditingData implements AuditedPropertiesHolder {
 	private final Map<String, PropertyAuditingData> properties;
 	private final Map<String, String> secondaryTableDictionary;
 	private boolean mergeable;
-	private long mergeTimeout;
+	private long mergeTimeoutSeconds;
 
 
 	private AuditTable auditTable;
@@ -38,7 +38,7 @@ public class ClassAuditingData implements AuditedPropertiesHolder {
 		properties = newHashMap();
 		secondaryTableDictionary = newHashMap();
 		mergeable = false;
-		mergeTimeout = -1;
+		mergeTimeoutSeconds = -1;
 	}
 
 	@Override
@@ -88,12 +88,12 @@ public class ClassAuditingData implements AuditedPropertiesHolder {
 		this.mergeable = mergeable;
 	}
 
-	public void setMergeTimeout(long mergeTimeout) {
-		this.mergeTimeout = mergeTimeout;
+	public void setMergeTimeoutSeconds(long mergeTimeoutSeconds) {
+		this.mergeTimeoutSeconds = mergeTimeoutSeconds;
 	}
 
-	public long getMergeTimeout() {
-		return mergeTimeout;
+	public long getMergeTimeoutSeconds() {
+		return mergeTimeoutSeconds;
 	}
 
 	@Override
