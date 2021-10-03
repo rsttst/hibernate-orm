@@ -173,13 +173,14 @@ public class TransactionAuditProcess implements AuditProcess {
 		final EnversService enversService = this.sessionImplementor.getSessionFactory().getServiceRegistry().getService(EnversService.class);
 		final IdMapper idMapper = enversService.getEntitiesConfigurations().get(entityName).getIdMapper();
 		final String auditEntityName = enversService.getAuditEntitiesConfiguration().getAuditEntityName(entityName);
+		final String originalIdPropName = enversService.getAuditEntitiesConfiguration().getOriginalIdPropName();
 		try (Session temporarySession = session.sessionWithOptions()
 				.connection()
 				.autoClose(false)
 				.connectionHandlingMode(PhysicalConnectionHandlingMode.DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION)
 				.openSession()) {
 			final QueryBuilder qb = new QueryBuilder(auditEntityName, AUDIT_QUERY_ALIAS, this.sessionImplementor.getSessionFactory());
-			idMapper.addIdEqualsToQuery(qb.getRootParameters(), entityId, AUDIT_QUERY_ALIAS, null, true);
+			idMapper.addIdEqualsToQuery(qb.getRootParameters(), entityId, AUDIT_QUERY_ALIAS, originalIdPropName, true);
 			qb.addProjection("count", AUDIT_QUERY_ALIAS, null, true);
 			final Number count = (Number) qb.toQuery(temporarySession).setHint(QueryHints.HINT_READONLY, true).getSingleResult();
 			return count.intValue() == 0;

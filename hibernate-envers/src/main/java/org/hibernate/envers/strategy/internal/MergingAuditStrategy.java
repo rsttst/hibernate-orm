@@ -46,7 +46,6 @@ import java.util.*;
 
 public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditStrategy {
 
-	private static final Set<String> REVISION_INFO_DATE_TYPES = new HashSet<>(Arrays.asList("date", "time", "timestamp"));
 	// both weak keys, strong values
 	// inner map: Pair(String entityName, Object entityId) => Pair(MergeKind mergeKind, Object targetRevision)
 	private final ConcurrentReferenceHashMap<Transaction, Map<Pair<String, Object>, Pair<MergeKind, Object>>> mergeInfoByEntityByTransaction;
@@ -83,7 +82,7 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 
 	private static <T> T tryCast(Object object, Class<T> clazz, String description) {
 		if (!clazz.isInstance(object)) {
-			throw new RuntimeException(String.format("Expected '%s' to be of type '%s' but was '%s'.",
+			throw new RuntimeException(String.format(Locale.ROOT, "Expected '%s' to be of type '%s' but was '%s'.",
 					description, clazz.getName(), object.getClass().getName()));
 		}
 		return clazz.cast(object);
@@ -96,7 +95,7 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 		if (!(globalConfiguration.isEnableUpdatableRevisions()
 				&& globalConfiguration.isGlobalWithModifiedFlag()
 				&& globalConfiguration.isRevisionPerTransaction())) {
-			throw new RuntimeException(String.format(
+			throw new RuntimeException(String.format(Locale.ROOT,
 					"To use MergingAuditStrategy you have to enable global modified flags (%s), "
 							+ "opt into updatable revisions (%s) and "
 							+ "enable revision per transaction mode (%s).",
@@ -105,10 +104,11 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 					EnversSettings.REVISION_PER_TRANSACTION
 			));
 		}
-		alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
 
+		alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
 		entitiesConfigurations = enversService.getEntitiesConfigurations();
 		auditEntitiesConfiguration = enversService.getAuditEntitiesConfiguration();
+
 		revisionInfoTimestampGetter = ReflectionTools.getGetter(
 				revisionInfoClass,
 				timestampData,
@@ -119,7 +119,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				timestampData,
 				serviceRegistry
 		);
-		revisionInfoTimestampIsDate = REVISION_INFO_DATE_TYPES.contains(timestampData.getType().getName());
+		final Class<?> revisionInfoTimestampType = ReflectionTools.getType(revisionInfoClass, timestampData, serviceRegistry);
+		revisionInfoTimestampIsDate = revisionInfoTimestampType == java.util.Date.class || revisionInfoTimestampType == java.sql.Date.class;
 	}
 
 	@Override

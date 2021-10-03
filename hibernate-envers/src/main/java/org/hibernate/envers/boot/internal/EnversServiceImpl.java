@@ -142,7 +142,7 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		);
 
 		if (globalConfiguration.isRevisionPerTransaction()) {
-			this.auditVetoer = initializeAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
+			this.auditVetoer = createAuditVetoer( auditEntitiesConfiguration.getAuditVetoerName(), serviceRegistry );
 			this.auditProcessManager = new PerTransactionAuditProcessManager( revInfoCfgResult.getRevisionInfoGenerator(), auditVetoer, globalConfiguration.isAlwaysPersistRevisions() );
 		}
 		else {
@@ -152,7 +152,7 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		this.revisionInfoQueryCreator = revInfoCfgResult.getRevisionInfoQueryCreator();
 		this.revisionInfoNumberReader = revInfoCfgResult.getRevisionInfoNumberReader();
 		this.modifiedEntityNamesReader = revInfoCfgResult.getModifiedEntityNamesReader();
-		this.auditStrategy = initializeAuditStrategy(
+		this.auditStrategy = createAuditStrategy(
 				auditEntitiesConfiguration.getAuditStrategyName(),
 				revInfoCfgResult.getRevisionInfoClass(),
 				revInfoCfgResult.getRevisionInfoTimestampData(),
@@ -169,15 +169,19 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 				revInfoCfgResult.getRevisionInfoXmlMapping(),
 				revInfoCfgResult.getRevisionInfoRelationMapping()
 		);
+
+		auditStrategy.postInitialize( revInfoCfgResult.getRevisionInfoClass(), revInfoCfgResult.getRevisionInfoTimestampData(), serviceRegistry );
+		if ( auditVetoer != null ) {
+			auditVetoer.postInitialize(serviceRegistry);
+		}
 	}
 
-	private static AuditStrategy initializeAuditStrategy(
+	private static AuditStrategy createAuditStrategy(
 			String auditStrategyName,
 			Class<?> revisionInfoClass,
 			PropertyData revisionInfoTimestampData,
 			ServiceRegistry serviceRegistry) {
 		AuditStrategy strategy;
-
 		try {
 			final Class<?> auditStrategyClass = loadClass( auditStrategyName, serviceRegistry );
 			strategy = (AuditStrategy) ReflectHelper.getDefaultConstructor( auditStrategyClass ).newInstance();
@@ -188,16 +192,11 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 					e
 			);
 		}
-
-		// Strategy-specific initialization
-		strategy.postInitialize( revisionInfoClass, revisionInfoTimestampData, serviceRegistry );
-
 		return strategy;
 	}
 
-	private static AuditVetoer initializeAuditVetoer(String auditVetoerName, ServiceRegistry serviceRegistry) {
+	private static AuditVetoer createAuditVetoer(String auditVetoerName, ServiceRegistry serviceRegistry) {
 		AuditVetoer auditVetoer;
-
 		try {
 			final Class<?> auditVetoerClass = loadClass( auditVetoerName, serviceRegistry );
 			auditVetoer = (AuditVetoer) ReflectHelper.getDefaultConstructor( auditVetoerClass ).newInstance();
@@ -205,10 +204,6 @@ public class EnversServiceImpl implements EnversService, Configurable, Stoppable
 		catch (Exception e) {
 			throw new MappingException( String.format( "Unable to create AuditVetoer [%s] instance.", auditVetoerName ), e);
 		}
-
-		// Strategy-specific initialization
-		auditVetoer.postInitialize( serviceRegistry );
-
 		return auditVetoer;
 	}
 
