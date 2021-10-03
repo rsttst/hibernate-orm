@@ -6,14 +6,9 @@
  */
 package org.hibernate.envers.configuration.internal.metadata.reader;
 
-import org.hibernate.MappingException;
 import org.hibernate.annotations.common.reflection.ReflectionManager;
 import org.hibernate.annotations.common.reflection.XClass;
-import org.hibernate.envers.AuditTable;
-import org.hibernate.envers.Audited;
-import org.hibernate.envers.ModificationStore;
-import org.hibernate.envers.SecondaryAuditTable;
-import org.hibernate.envers.SecondaryAuditTables;
+import org.hibernate.envers.*;
 import org.hibernate.envers.configuration.internal.GlobalConfiguration;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.mapping.Property;
@@ -102,10 +97,13 @@ public final class AnnotationsMetadataReader {
 			auditData.setDefaultAudited( true );
 		}
 
-		final Audited audited = xclass.getAnnotation(Audited.class);
-		if (audited != null) {
-			auditData.setMergeable(audited.mergeable());
-			auditData.setMergeTimeout(audited.mergeTimeout());
+		final AuditMerge auditMerge = xclass.getAnnotation(AuditMerge.class);
+		if (auditMerge != null) {
+			auditData.setMergeable(auditMerge.mergeable());
+			auditData.setMergeTimeoutSeconds(auditMerge.timeoutSeconds());
+		} else {
+			auditData.setMergeable(globalCfg.isDefaultAuditMergeEnabled());
+			auditData.setMergeTimeoutSeconds(globalCfg.getDefaultAuditMergeTimeoutSeconds());
 		}
 
 		new AuditedPropertiesReader(

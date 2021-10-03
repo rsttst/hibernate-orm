@@ -73,12 +73,21 @@ public class GlobalConfiguration {
 	// Forces audit reader find by revision methods to perform exact match
 	private final boolean findByRevisionExactMatch;
 
+	// If true every transaction has it's own revision instead of every session
+	private final boolean revisionPerTransaction;
+
 	// Opt into revision-info and audit entities being made updatable for MergingAuditStrategy.
 	private final boolean enableUpdatableRevisions;
 
 	// Always save revision info entities even when the audit strategy saves no audited entities.
 	// Disabling it currently only has an effect on MergingAuditStrategy.
 	private boolean alwaysPersistRevisions;
+
+	// Only works with MergingAuditStrategy. Whether audits of entities should be merged by default if @AuditMerge is not specified.
+	private boolean defaultAuditMergeEnabled;
+
+	// Only works with MergingAuditStrategy. How long the merge timeout is if @AuditMerge is not specified.
+	private long defaultAuditMergeTimeoutSeconds;
 
 	/*
 		 Which operator to use in correlated subqueries (when we want a property to be equal to the result of
@@ -194,12 +203,24 @@ public class GlobalConfiguration {
 				EnversSettings.FIND_BY_REVISION_EXACT_MATCH, properties, false
 		);
 
+		revisionPerTransaction = ConfigurationHelper.getBoolean(
+				EnversSettings.REVISION_PER_TRANSACTION, properties, false
+		);
+
 		enableUpdatableRevisions = ConfigurationHelper.getBoolean(
 				EnversSettings.ENABLE_UPDATABLE_REVISIONS, properties, false
 		);
 
 		alwaysPersistRevisions = ConfigurationHelper.getBoolean(
 				EnversSettings.ALWAYS_PERSIST_REVISIONS, properties, true
+		);
+
+		defaultAuditMergeEnabled = ConfigurationHelper.getBoolean(
+				EnversSettings.DEFAULT_AUDIT_MERGE_ENABLED, properties, true
+		);
+
+		defaultAuditMergeTimeoutSeconds = ConfigurationHelper.getLong(
+				EnversSettings.DEFAULT_AUDIT_MERGE_TIMEOUT_SECONDS, properties, 300
 		);
 	}
 
@@ -269,6 +290,18 @@ public class GlobalConfiguration {
 
 	public boolean isAuditReaderFindAtRevisionExactMatch() {
 		return findByRevisionExactMatch;
+	}
+
+	public boolean isRevisionPerTransaction() {
+		return revisionPerTransaction;
+	}
+
+	public boolean isDefaultAuditMergeEnabled() {
+		return defaultAuditMergeEnabled;
+	}
+
+	public long getDefaultAuditMergeTimeoutSeconds() {
+		return defaultAuditMergeTimeoutSeconds;
 	}
 
 	public boolean isEnableUpdatableRevisions() {

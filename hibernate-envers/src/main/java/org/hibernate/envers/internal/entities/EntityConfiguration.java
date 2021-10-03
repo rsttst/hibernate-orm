@@ -31,7 +31,7 @@ public class EntityConfiguration {
 	private String parentEntityName;
 
 	private boolean mergeable;
-	private long mergeTimeout;
+	private long mergeTimeoutSeconds;
 
 	public EntityConfiguration(
 			String versionsEntityName,
@@ -40,7 +40,7 @@ public class EntityConfiguration {
 			ExtendedPropertyMapper propertyMapper,
 			String parentEntityName,
 			boolean mergeable,
-			long mergeTimeout) {
+			long mergeTimeoutSeconds) {
 		this.versionsEntityName = versionsEntityName;
 		this.entityClassName = entityClassName;
 		this.idMappingData = idMappingData;
@@ -50,18 +50,9 @@ public class EntityConfiguration {
 		this.relations = new HashMap<>();
 
 		this.mergeable = mergeable;
-		this.mergeTimeout = mergeTimeout;
+		this.mergeTimeoutSeconds = mergeTimeoutSeconds;
 	}
-
-	public EntityConfiguration(
-			String versionsEntityName,
-			String entityClassName,
-			IdMappingData idMappingData,
-			ExtendedPropertyMapper propertyMapper,
-			String parentEntityName) {
-		this(versionsEntityName, entityClassName, idMappingData, propertyMapper, parentEntityName, false, -1L);
-	}
-
+	
 	public void addToOneRelation(
 			String fromPropertyName,
 			String toEntityName,
@@ -173,7 +164,7 @@ public class EntityConfiguration {
 		return mergeable;
 	}
 
-	public long getMergeTimeout() {
-		return mergeTimeout;
+	public long getMergeTimeoutSeconds() {
+		return mergeTimeoutSeconds;
 	}
 }

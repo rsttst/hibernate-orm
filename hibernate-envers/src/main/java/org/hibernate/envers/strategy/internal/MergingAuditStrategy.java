@@ -44,7 +44,6 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
     private Getter revisionInfoTimestampGetter;
     private Setter revisionInfoTimestampSetter;
     private boolean revisionInfoTimestampIsDate;
-
     private boolean alwaysPersistRevisions;
 
     // both weak keys, strong values
@@ -68,10 +67,16 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
     public void postInitialize(Class<?> revisionInfoClass, PropertyData timestampData, ServiceRegistry serviceRegistry) {
         final EnversService enversService = serviceRegistry.getService(EnversService.class);
         final GlobalConfiguration globalConfiguration = enversService.getGlobalConfiguration();
-        if (!(globalConfiguration.isEnableUpdatableRevisions() && globalConfiguration.isGlobalWithModifiedFlag())) {
+        if (!(globalConfiguration.isEnableUpdatableRevisions()
+                && globalConfiguration.isGlobalWithModifiedFlag()
+                && globalConfiguration.isRevisionPerTransaction())) {
             throw new RuntimeException(String.format(
-                    "To use MergingAuditStrategy you have to enable global modified flags (%s) and opt into updatable revisions (%s).",
-                    EnversSettings.GLOBAL_WITH_MODIFIED_FLAG, EnversSettings.ENABLE_UPDATABLE_REVISIONS
+                    "To use MergingAuditStrategy you have to enable global modified flags (%s), "
+                    + "opt into updatable revisions (%s) and "
+                    + "enable revision per transaction mode (%s).",
+                    EnversSettings.GLOBAL_WITH_MODIFIED_FLAG,
+                    EnversSettings.ENABLE_UPDATABLE_REVISIONS,
+                    EnversSettings.REVISION_PER_TRANSACTION
             ));
         }
         alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
@@ -101,9 +106,11 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
             Object currentRevision
     ) {
         final Pair<String, Object> entityNameWithId = Pair.make(entityName, entityId);
+        final EntityConfiguration entityConfiguration = entitiesConfigurations.get(entityName);
 
         final Transaction transaction = session.getTransaction();
-        if (getRevisionTypeFromAuditData(currentAuditData) != RevisionType.MOD) { // only MOD revisions are mergeable
+        if (!entityConfiguration.isMergeable()
+                || getRevisionTypeFromAuditData(currentAuditData) != RevisionType.MOD) { // only MOD revisions are mergeable
             defaultPerform(session, entityName, entityId, currentAuditData, currentRevision, transaction, entityNameWithId);
             return;
         }
@@ -121,7 +128,7 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
             final Object previousRevision = previousRevisionInfo.getFirst();
             final Object beforePreviousRevisionEntity = previousRevisionInfo.getSecond();
 
-            if (!isRevisionInMergeableTimeframe(currentRevision, previousRevision, entityName)) {
+            if (!isRevisionInMergeableTimeframe(currentRevision, previousRevision, entityConfiguration)) {
                 defaultPerform(session, entityName, entityId, currentAuditData, currentRevision, transaction, entityNameWithId);
                 return;
             }
@@ -135,7 +142,6 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
             /* ==================== REVISION MERGE START ==================== */
             final AbstractEntityPersister entityPersister = getPersisterFromEntityName(session.unwrap(SessionImplementor.class), entityName);
             final String auditEntityName = auditEntitiesConfiguration.getAuditEntityName(entityName);
-            final EntityConfiguration entityConfiguration = entitiesConfigurations.get(entityName);
 
             final Map<String, Object> mergeAuditData = createAuditEntityData(
                     temporarySession.unwrap(SessionImplementor.class),
@@ -385,10 +391,15 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
         }
     }
 
-    private boolean isRevisionInMergeableTimeframe(Object currentRevision, Object previousRevision, String entityName) {
+    private boolean isRevisionInMergeableTimeframe(Object currentRevision, Object previousRevision, EntityConfiguration entityConfiguration) {
+        final long timeoutSeconds = entityConfiguration.getMergeTimeoutSeconds();
+        if (timeoutSeconds <= 0L) {
+            return true;
+        }
+
         final Instant currentRevisionTimestamp = getRevisionTimestamp(currentRevision);
         final Instant previousRevisionTimestamp = getRevisionTimestamp(previousRevision);
-        return currentRevisionTimestamp.isBefore(previousRevisionTimestamp.plusSeconds(entitiesConfigurations.get(entityName).getMergeTimeout()));
+        return currentRevisionTimestamp.isBefore(previousRevisionTimestamp.plusSeconds(timeoutSeconds));
     }
 
     // Pair(Object previousRevision, Object entityBeforePreviousRevision)
