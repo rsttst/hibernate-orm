@@ -9,6 +9,7 @@ package org.hibernate.envers.internal.entities.mapper;
 import java.util.Map;
 
 import org.hibernate.engine.spi.SessionImplementor;
+import org.hibernate.envers.internal.entities.PropertyData;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -20,4 +21,6 @@ public interface ExtendedPropertyMapper extends PropertyMapper, CompositeMapperB
 			String[] propertyNames,
 			Object[] newState,
 			Object[] oldState);
+
+	Map<String, PropertyData> getPropertyDatas();
 }

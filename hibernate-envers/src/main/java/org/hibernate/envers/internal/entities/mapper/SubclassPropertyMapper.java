@@ -143,6 +143,14 @@ public class SubclassPropertyMapper extends AbstractPropertyMapper implements Ex
 	}
 
 	@Override
+	public Map<String, PropertyData> getPropertyDatas() {
+		final Map<String, PropertyData> joinedPropertyDatas = new HashMap<>();
+		joinedPropertyDatas.putAll( parentMapper.getPropertyDatas() );
+		joinedPropertyDatas.putAll( main.getPropertyDatas() );
+		return joinedPropertyDatas;
+	}
+
+	@Override
 	public boolean hasPropertiesWithModifiedFlag() {
 		// checks all properties, exposed both by the main mapper and parent mapper.
 		for ( PropertyData property : getProperties().keySet() ) {

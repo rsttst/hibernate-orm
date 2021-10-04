@@ -346,4 +346,8 @@ public abstract class AbstractCollectionMapper<T> extends AbstractPropertyMapper
 		}
 		return false;
 	}
+
+	public MiddleIdData getReferencingIdData() {
+		return commonCollectionMapperData.getReferencingIdData();
+	}
 }

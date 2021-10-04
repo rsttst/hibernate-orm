@@ -7,6 +7,7 @@
 package org.hibernate.envers.strategy.internal;
 
 import org.hibernate.FlushMode;
+import org.hibernate.Hibernate;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
 import org.hibernate.collection.spi.PersistentCollection;
@@ -152,7 +153,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				return;
 			}
 
-			final Object previousRevision = previousRevisionInfo.getFirst();
+			// un-proxy the revision since we are indirectly accessing fields via reflection
+			final Object previousRevision = Hibernate.unproxy(previousRevisionInfo.getFirst());
 			final Object beforePreviousRevisionEntity = previousRevisionInfo.getSecond();
 
 			if (!isRevisionInMergeableTimeframe(currentRevision, previousRevision, entityConfiguration)) {
@@ -160,11 +162,14 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				return;
 			}
 
-			// grab the current state from the non-temporary session since it should already exist there
-			if (!session.contains(entityName, entityId)) {
-				throw new RuntimeException("Current state of audited entity is not in session.");
+			// grab the current state from the non-temporary session if it already exists there
+			final Object currentEntity;
+			if (session.contains(entityName, entityId)) {
+				currentEntity = session.get(entityName, entityId);
 			}
-			final Object currentEntity = session.get(entityName, entityId);
+			else {
+				currentEntity = temporarySession.get(entityName, entityId);
+			}
 
 			/* ==================== REVISION MERGE START ==================== */
 			final AbstractEntityPersister entityPersister = getPersisterFromEntityName(session.unwrap(SessionImplementor.class), entityName);
@@ -174,8 +179,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 					temporarySession.unwrap(SessionImplementor.class),
 					entityName,
 					entityPersister.getEntityTuplizer(),
-					currentEntity,
 					beforePreviousRevisionEntity,
+					currentEntity,
 					entityId
 			);
 
@@ -199,8 +204,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				entitiesConfigurations.get(entityName).getIdMapper().mapToMapFromId(temporarySession, previousAuditDataId, entityId);
 
 				temporarySession.clear();
-				temporarySession.merge(currentRevision);
-				temporarySession.merge(auditEntityName, mergeAuditData);
+				temporarySession.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
+				temporarySession.save(auditEntityName, mergeAuditData);
 				temporarySession.remove(temporarySession.load(auditEntityName, previousAuditDataId));
 				temporarySession.flush();
 
@@ -211,8 +216,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				setRevisionTimestamp(previousRevision, getRevisionTimestamp(currentRevision));
 
 				temporarySession.clear();
-				temporarySession.merge(previousRevision);
-				temporarySession.merge(auditEntityName, mergeAuditData);
+				temporarySession.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), previousRevision);
+				temporarySession.update(auditEntityName, mergeAuditData);
 				temporarySession.flush();
 
 				mergeInfo = Pair.make(MergeKind.MERGE_BY_UPDATE_BACKWARDS, previousRevision);
@@ -239,11 +244,11 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 			Pair<String, Object> entityNameWithId
 	) {
 		if (!alwaysPersistRevisions) {
-			session.save(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
-			session.flush();
+			session.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
 		}
 		super.perform(session, entityName, auditEntitiesConfiguration, entityId, currentAuditData, currentRevision);
 		mergeInfoByEntityByTransaction.computeIfAbsent(transaction, ignore -> new HashMap<>()).put(entityNameWithId, Pair.make(MergeKind.NO_MERGE, null));
+		session.flush(); // Flush here because of revision entity
 	}
 
 	@Override
@@ -255,10 +260,8 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 			PersistentCollectionChangeData persistentCollectionChangeData,
 			Object revision
 	) {
-		final HashMap<?, ?> originalId = (HashMap<?, ?>) persistentCollectionChangeData.getData().get(auditEntitiesConfiguration.getOriginalIdPropName());
-		final Object owningEntityId = entitiesConfigurations.get(entityName).getIdMapper().prefixMappedProperties(entityName).mapToIdFromMap(originalId);
+		final Object owningEntityId = getReferencingEntityId(entityName, propertyName, persistentCollectionChangeData);
 		final Transaction transaction = session.getTransaction();
-
 		final Map<Pair<String, Object>, Pair<MergeKind, Object>> mergeInfoByEntity = mergeInfoByEntityByTransaction.get(transaction);
 		if (mergeInfoByEntity == null) {
 			throw new RuntimeException("Collection change before parent change");
@@ -275,7 +278,9 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 		}
 
 		try (Session temporarySession = createTemporarySession(session)) {
-			final HashMap<Object, Object> targetAuditDataId = new HashMap<>(originalId);
+			final HashMap<?, ?> collectionOriginalId = (HashMap<?, ?>) persistentCollectionChangeData.getData()
+					.get(auditEntitiesConfiguration.getOriginalIdPropName());
+			final HashMap<Object, Object> targetAuditDataId = new HashMap<>(collectionOriginalId);
 			targetAuditDataId.put(auditEntitiesConfiguration.getRevisionFieldName(), mergeInfo.getSecond());
 
 			if (mergeInfo.getFirst() == MergeKind.MERGE_BY_UNDO) {
@@ -302,17 +307,25 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 						// 2: If a MOD audit exists at the target revision just override it.
 						// 3: If an ADD audit exists at the target revision override it but with revision type ADD (can this even happen?).
 						final Object targetAuditMod = temporarySession.get(persistentCollectionChangeData.getEntityName(), targetAuditDataId);
-						if (targetAuditMod != null && getRevisionTypeFromAuditData(targetAuditMod) == RevisionType.ADD) { // case 3
-							currentAuditBackPorted.put(auditEntitiesConfiguration.getRevisionTypePropName(), RevisionType.ADD);
+						if (targetAuditMod == null) {
+							temporarySession.save(persistentCollectionChangeData.getEntityName(), currentAuditBackPorted);
 						}
-						temporarySession.save(persistentCollectionChangeData.getEntityName(), currentAuditBackPorted);
+						else {
+							if (getRevisionTypeFromAuditData(targetAuditMod) == RevisionType.ADD) { // case 3
+								currentAuditBackPorted.put(auditEntitiesConfiguration.getRevisionTypePropName(), RevisionType.ADD);
+							}
+							temporarySession.update(persistentCollectionChangeData.getEntityName(), currentAuditBackPorted);
+						}
 						break;
 					case DEL:
 						// 1: If no previous audit exists or it is a MOD audit, override/save the current audit at the target revision.
 						// 2: If the previous audit is an ADD audit just delete it.
 						final Object targetAuditDel = temporarySession.get(persistentCollectionChangeData.getEntityName(), targetAuditDataId);
-						if (targetAuditDel == null || getRevisionTypeFromAuditData(targetAuditDel) != RevisionType.ADD) { // case 1
+						if (targetAuditDel == null) {
 							temporarySession.save(persistentCollectionChangeData.getEntityName(), currentAuditBackPorted);
+						}
+						else if (getRevisionTypeFromAuditData(targetAuditDel) != RevisionType.ADD) {
+							temporarySession.update(persistentCollectionChangeData.getEntityName(), currentAuditBackPorted);
 						}
 						else { // case 2
 							temporarySession.remove(targetAuditDel);
@@ -372,13 +385,29 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 		}
 	}
 
+	private Object getReferencingEntityId(String referencingEntityName, String propertyName, PersistentCollectionChangeData changeData) {
+		final ExtendedPropertyMapper entityPropertyMapper = entitiesConfigurations.get(referencingEntityName).getPropertyMapper();
+		final PropertyData collectionPropertyData = entityPropertyMapper.getPropertyDatas().get(propertyName);
+		final AbstractCollectionMapper<?> collectionPropertyMapper = tryCastNonNull(
+				entityPropertyMapper.getProperties().get(collectionPropertyData),
+				AbstractCollectionMapper.class,
+				"collection mapper");
+
+		final HashMap<?, ?> collectionOriginalId = (HashMap<?, ?>) changeData.getData()
+				.get(auditEntitiesConfiguration.getOriginalIdPropName());
+		return collectionPropertyMapper.getReferencingIdData().getPrefixedMapper().mapToIdFromMap(collectionOriginalId);
+	}
+
 	private boolean isForwardMergeNecessary(EntityConfiguration entityConfiguration, Map<String, Object> auditData) {
 		for (PropertyData propertyData : entityConfiguration.getPropertyMapper().getProperties().keySet()) {
 			final RelationDescription relationDescription = entityConfiguration.getRelationDescription(propertyData.getName());
 			if (relationDescription != null) {
 				final Boolean columnWasModified = tryCast(auditData.get(propertyData.getModifiedFlagPropertyName()), Boolean.class, "modified flag");
-				if (Boolean.TRUE.equals(columnWasModified) && auditData.get(propertyData.getName()) != null) {
-					return true;
+				if (Boolean.TRUE.equals(columnWasModified)) {
+					final IdMapper relationIdMapper = relationDescription.getIdMapper(); // null if relation uses middle table
+					if (relationIdMapper == null || (relationIdMapper.mapToIdFromMap(auditData) != null)) {
+						return true;
+					}
 				}
 			}
 		}

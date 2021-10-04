@@ -265,6 +265,7 @@ public class MultiPropertyMapper extends AbstractPropertyMapper implements Exten
 		return properties;
 	}
 
+	@Override
 	public Map<String, PropertyData> getPropertyDatas() {
 		return propertyDatas;
 	}
