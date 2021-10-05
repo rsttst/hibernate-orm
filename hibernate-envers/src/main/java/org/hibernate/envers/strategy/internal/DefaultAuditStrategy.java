@@ -9,8 +9,10 @@ package org.hibernate.envers.strategy.internal;
 import java.io.Serializable;
 
 import org.hibernate.Session;
+import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.configuration.internal.AuditEntitiesConfiguration;
 import org.hibernate.envers.configuration.internal.GlobalConfiguration;
+import org.hibernate.envers.internal.entities.PropertyData;
 import org.hibernate.envers.internal.entities.mapper.PersistentCollectionChangeData;
 import org.hibernate.envers.internal.entities.mapper.relation.MiddleComponentData;
 import org.hibernate.envers.internal.entities.mapper.relation.MiddleIdData;
@@ -18,6 +20,7 @@ import org.hibernate.envers.internal.synchronization.SessionCacheCleaner;
 import org.hibernate.envers.internal.tools.query.Parameters;
 import org.hibernate.envers.internal.tools.query.QueryBuilder;
 import org.hibernate.envers.strategy.AuditStrategy;
+import org.hibernate.service.ServiceRegistry;
 
 import static org.hibernate.envers.internal.entities.mapper.relation.query.QueryConstants.MIDDLE_ENTITY_ALIAS_DEF_AUD_STR;
 import static org.hibernate.envers.internal.entities.mapper.relation.query.QueryConstants.REVISION_PARAMETER;
@@ -34,8 +37,17 @@ import static org.hibernate.envers.internal.entities.mapper.relation.query.Query
 public class DefaultAuditStrategy implements AuditStrategy {
 	private final SessionCacheCleaner sessionCacheCleaner;
 
+	protected boolean alwaysPersistRevisions;
+
 	public DefaultAuditStrategy() {
 		sessionCacheCleaner = new SessionCacheCleaner();
+	}
+
+	@Override
+	public void postInitialize(Class<?> revisionInfoClass, PropertyData timestampData, ServiceRegistry serviceRegistry) {
+		final EnversService enversService = serviceRegistry.getService(EnversService.class);
+		final GlobalConfiguration globalConfiguration = enversService.getGlobalConfiguration();
+		alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
 	}
 
 	@Override
@@ -46,6 +58,9 @@ public class DefaultAuditStrategy implements AuditStrategy {
 			Serializable id,
 			Object data,
 			Object revision) {
+		if ( !alwaysPersistRevisions ) {
+			session.save( auditEntitiesConfiguration.getRevisionInfoEntityName(), revision );
+		}
 		session.save( auditEntitiesConfiguration.getAuditEntityName( entityName ), data );
 		sessionCacheCleaner.scheduleAuditDataRemoval( session, data );
 	}
@@ -58,6 +73,9 @@ public class DefaultAuditStrategy implements AuditStrategy {
 			AuditEntitiesConfiguration auditEntitiesConfiguration,
 			PersistentCollectionChangeData persistentCollectionChangeData,
 			Object revision) {
+		if ( !alwaysPersistRevisions ) {
+			session.save( auditEntitiesConfiguration.getRevisionInfoEntityName(), revision );
+		}
 		session.save( persistentCollectionChangeData.getEntityName(), persistentCollectionChangeData.getData() );
 		sessionCacheCleaner.scheduleAuditDataRemoval( session, persistentCollectionChangeData.getData() );
 	}

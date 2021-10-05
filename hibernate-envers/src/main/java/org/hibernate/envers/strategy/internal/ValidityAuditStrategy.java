@@ -24,6 +24,7 @@ import org.hibernate.action.spi.BeforeTransactionCompletionProcess;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.engine.spi.SharedSessionContractImplementor;
 import org.hibernate.envers.RevisionType;
+import org.hibernate.envers.boot.internal.EnversService;
 import org.hibernate.envers.configuration.internal.AuditEntitiesConfiguration;
 import org.hibernate.envers.configuration.internal.GlobalConfiguration;
 import org.hibernate.envers.configuration.internal.metadata.MetadataTools;
@@ -79,6 +80,7 @@ public class ValidityAuditStrategy implements AuditStrategy {
 	 * getter for the revision entity field annotated with @RevisionTimestamp
 	 */
 	private Getter revisionTimestampGetter;
+	private boolean alwaysPersistRevisions;
 
 	private final SessionCacheCleaner sessionCacheCleaner;
 
@@ -98,6 +100,10 @@ public class ValidityAuditStrategy implements AuditStrategy {
 				serviceRegistry
 		);
 		setRevisionTimestampGetter( revisionTimestampGetter );
+
+		final EnversService enversService = serviceRegistry.getService(EnversService.class);
+		final GlobalConfiguration globalConfiguration = enversService.getGlobalConfiguration();
+		alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
 	}
 
 	@Override
@@ -144,6 +150,10 @@ public class ValidityAuditStrategy implements AuditStrategy {
 			final Serializable id,
 			final Object data,
 			final Object revision) {
+		if ( !alwaysPersistRevisions ) {
+			session.save( audEntitiesCfg.getRevisionInfoEntityName(), revision );
+		}
+
 		final String auditedEntityName = audEntitiesCfg.getAuditEntityName( entityName );
 		final String revisionInfoEntityName = audEntitiesCfg.getRevisionInfoEntityName();
 
@@ -293,6 +303,10 @@ public class ValidityAuditStrategy implements AuditStrategy {
 			String propertyName,
 			AuditEntitiesConfiguration auditEntitiesConfiguration,
 			PersistentCollectionChangeData persistentCollectionChangeData, Object revision) {
+		if ( !alwaysPersistRevisions ) {
+			session.save( auditEntitiesConfiguration.getRevisionInfoEntityName(), revision );
+		}
+
 		final QueryBuilder qb = new QueryBuilder(
 				persistentCollectionChangeData.getEntityName(),
 				MIDDLE_ENTITY_ALIAS,

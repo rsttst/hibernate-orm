@@ -55,7 +55,6 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 	private Getter revisionInfoTimestampGetter;
 	private Setter revisionInfoTimestampSetter;
 	private boolean revisionInfoTimestampIsDate;
-	private boolean alwaysPersistRevisions;
 
 	public MergingAuditStrategy() {
 		super();
@@ -105,8 +104,6 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 					EnversSettings.REVISION_PER_TRANSACTION
 			));
 		}
-
-		alwaysPersistRevisions = globalConfiguration.isAlwaysPersistRevisions();
 		entitiesConfigurations = enversService.getEntitiesConfigurations();
 		auditEntitiesConfiguration = enversService.getAuditEntitiesConfiguration();
 
@@ -204,7 +201,11 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				entitiesConfigurations.get(entityName).getIdMapper().mapToMapFromId(temporarySession, previousAuditDataId, entityId);
 
 				temporarySession.clear();
-				temporarySession.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
+				if (alwaysPersistRevisions) {
+					session.flush(); // flush the parent session so that we can see the revision info entity
+				} else {
+					temporarySession.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
+				}
 				temporarySession.save(auditEntityName, mergeAuditData);
 				temporarySession.remove(temporarySession.load(auditEntityName, previousAuditDataId));
 				temporarySession.flush();
@@ -216,7 +217,7 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 				setRevisionTimestamp(previousRevision, getRevisionTimestamp(currentRevision));
 
 				temporarySession.clear();
-				temporarySession.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), previousRevision);
+				temporarySession.update(auditEntitiesConfiguration.getRevisionInfoEntityName(), previousRevision);
 				temporarySession.update(auditEntityName, mergeAuditData);
 				temporarySession.flush();
 
@@ -243,12 +244,9 @@ public class MergingAuditStrategy extends DefaultAuditStrategy implements AuditS
 			Transaction transaction,
 			Pair<String, Object> entityNameWithId
 	) {
-		if (!alwaysPersistRevisions) {
-			session.saveOrUpdate(auditEntitiesConfiguration.getRevisionInfoEntityName(), currentRevision);
-		}
 		super.perform(session, entityName, auditEntitiesConfiguration, entityId, currentAuditData, currentRevision);
 		mergeInfoByEntityByTransaction.computeIfAbsent(transaction, ignore -> new HashMap<>()).put(entityNameWithId, Pair.make(MergeKind.NO_MERGE, null));
-		session.flush(); // Flush here because of revision entity
+		session.flush(); // flush so that temporary sessions can see the revision info entity
 	}
 
 	@Override
