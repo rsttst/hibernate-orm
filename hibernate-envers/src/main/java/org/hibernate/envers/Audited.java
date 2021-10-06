@@ -64,5 +64,4 @@ public @interface Audited {
 	 * annotation. Ignored if withModifiedFlag is false.
 	 */
 	String modifiedColumnName() default "";
-
 }

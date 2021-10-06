@@ -181,9 +181,8 @@ public class TransactionAuditProcess implements AuditProcess {
 				.openSession()) {
 			final QueryBuilder qb = new QueryBuilder(auditEntityName, AUDIT_QUERY_ALIAS, this.sessionImplementor.getSessionFactory());
 			idMapper.addIdEqualsToQuery(qb.getRootParameters(), entityId, AUDIT_QUERY_ALIAS, originalIdPropName, true);
-			qb.addProjection("count", AUDIT_QUERY_ALIAS, null, true);
-			final Number count = (Number) qb.toQuery(temporarySession).setHint(QueryHints.HINT_READONLY, true).getSingleResult();
-			return count.intValue() == 0;
+			qb.addProjection(null, "1", null, false); // returns no result if there is no entry
+			return qb.toQuery(temporarySession).setHint(QueryHints.HINT_READONLY, true).getResultList().isEmpty();
 		}
 	}
 
